@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNStock - Hệ Thống Giám Sát Thị Trường Chứng Khoán Việt Nam</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        finance: {
+                            bg: '#f8fafc',       // Soft slate gray background
+                            card: '#ffffff',     // Pure white card
+                            border: '#e2e8f0',   // Slate 200 light grid line
+                            accent: '#2563eb',   // Professional blue
+                            bull: '#059669',     // Emerald Green (High contrast)
+                            bear: '#dc2626',     // Red (High contrast)
+                            ref: '#b45309',      // Amber Yellow (High contrast)
+                            ceil: '#7c3aed',     // Purple
+                            floor: '#0891b2'     // Cyan
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        /* Custom scrollbar for light theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+        .glow-green {
+            box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.08), 0 4px 12px -2px rgba(16, 185, 129, 0.03);
+        }
+        .glow-blue {
+            box-shadow: 0 10px 30px -5px rgba(37, 99, 235, 0.08), 0 4px 12px -2px rgba(37, 99, 235, 0.03);
+        }
+        .table-container {
+            scrollbar-width: thin;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo section -->
+            <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center font-black text-white text-xl shadow-md">
+                        VS
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-xl font-extrabold tracking-wider text-slate-900">VNSTOCK</h1>
+                            <span class="text-emerald-700 text-[10px] bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">PRO v2.0</span>
+                        </div>
+                        <p class="text-xs text-slate-500">Hệ thống phân tích & tra cứu chứng khoán toàn thị trường • <span class="text-blue-600 font-semibold">dev bởi devlinphu</span></p>
+                    </div>
+                </div>
+                <!-- Mobile Time Display -->
+                <div class="lg:hidden text-right text-xs">
+                    <span id="mobile-live-clock" class="text-emerald-600 font-mono font-bold">09:00:00</span>
+                </div>
+            </div>
+
+            <!-- LIVE MARKET BOARD (VN-Index, VN30, HNX) -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-end gap-3 w-full lg:w-auto text-xs">
+                <!-- VN-INDEX -->
+                <div class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">
+                    <span class="text-slate-500 font-bold">VN-INDEX:</span>
+                    <span id="index-vnindex" class="font-mono font-bold text-finance-bull">1,254.82</span>
+                    <span id="change-vnindex" class="font-mono text-[10px] text-finance-bull">+12.45 (+1.00%)</span>
+                </div>
+                <!-- VN30 -->
+                <div class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">
+                    <span class="text-slate-500 font-bold">VN30:</span>
+                    <span id="index-vn30" class="font-mono font-bold text-finance-bull">1,272.10</span>
+                    <span id="change-vn30" class="font-mono text-[10px] text-finance-bull">+14.12 (+1.12%)</span>
+                </div>
+                <!-- HNX-INDEX -->
+                <div class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">
+                    <span class="text-slate-500 font-bold">HNX-INDEX:</span>
+                    <span id="index-hnx" class="font-mono font-bold text-finance-bear">234.15</span>
+                    <span id="change-hnx" class="font-mono text-[10px] text-finance-bear">-0.82 (-0.35%)</span>
+                </div>
+                <!-- Desktop Live Clock -->
+                <div class="hidden lg:flex bg-white px-3 py-1.5 rounded-lg border border-slate-200 items-center gap-2 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="live-clock" class="text-slate-700 font-mono font-bold">09:00:00</span>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        
+        <!-- TWO COLUMN MASTER LAYOUT -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT: ALL STOCKS BOARD & WATCHLIST -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- WATCHLIST CHIPS -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-amber-500 fill-amber-500"></i>
+                            Ghim Theo Dõi Nhanh
+                        </h3>
+                        <span class="text-[10px] text-slate-400">Nhấp để xem nhanh</span>
+                    </div>
+                    <div id="watchlist-chips" class="flex flex-wrap gap-2">
+                        <!-- JS Dynamic insertion of pins -->
+                    </div>
+                </div>
+
+                <!-- ALL STOCKS MARKET BOARD -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[580px] shadow-sm">
+                    <!-- Table Header & Filters -->
+                    <div class="p-4 border-b border-slate-200 bg-slate-50/50 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                <i data-lucide="line-chart" class="text-blue-600 w-4 h-4"></i>
+                                Bảng Giá Toàn Thị Trường (VN30+)
+                            </h2>
+                            <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold border border-blue-100">HOSE & HNX</span>
+                        </div>
+                        
+                        <!-- Search Box -->
+                        <div class="relative">
+                            <input type="text" id="market-search" oninput="filterAndRenderMarketTable()" class="w-full bg-white border border-slate-200 rounded-lg py-2 pl-9 pr-4 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition font-mono shadow-sm" placeholder="Nhập mã bất kỳ (FPT, HPG, VCB, SSI, DGC...)...">
+                            <i data-lucide="search" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400"></i>
+                            <button onclick="handleManualAddStock()" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-2.5 py-1 rounded transition">Tìm/Tạo mã</button>
+                        </div>
+
+                        <!-- Industry Sector Filter Tabs -->
+                        <div class="flex flex-wrap gap-1 text-[11px] overflow-x-auto pb-1" id="sector-filters">
+                            <button onclick="changeSectorFilter('ALL')" id="sect-ALL" class="sect-btn px-2.5 py-1 rounded-md bg-blue-600 text-white font-semibold transition shadow-sm">Tất Cả</button>
+                            <button onclick="changeSectorFilter('BANK')" id="sect-BANK" class="sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition">Ngân Hàng</button>
+                            <button onclick="changeSectorFilter('REAL_ESTATE')" id="sect-REAL_ESTATE" class="sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition">Bất Động Sản</button>
+                            <button onclick="changeSectorFilter('STEEL')" id="sect-STEEL" class="sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition">Thép</button>
+                            <button onclick="changeSectorFilter('TECH')" id="sect-TECH" class="sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition">Công Nghệ</button>
+                            <button onclick="changeSectorFilter('CONSUMER')" id="sect-CONSUMER" class="sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition">Bán Lẻ</button>
+                        </div>
+                    </div>
+
+                    <!-- Market Stocks Table -->
+                    <div class="flex-grow overflow-y-auto table-container">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-slate-50 text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-200 z-10">
+                                <tr>
+                                    <th class="py-2.5 px-3">Mã</th>
+                                    <th class="py-2.5 px-2">Thị giá (đ)</th>
+                                    <th class="py-2.5 px-2 text-right">Biến động</th>
+                                    <th class="py-2.5 px-3 text-right">Khớp (CP)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="market-table-body" class="divide-y divide-slate-100 text-xs">
+                                <!-- Dynamic JS stock list rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Table Footer Stats -->
+                    <div class="p-3 border-t border-slate-200 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400">
+                        <span>Hiển thị <strong id="visible-ticker-count" class="text-slate-700">0</strong> mã trên thị trường</span>
+                        <span class="italic">Cung cấp bởi VNStock</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT: DETAILED ANALYSIS TERMINAL -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- CURRENT SELECTED STOCK HIGHLIGHT BANNER -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 glow-green relative overflow-hidden shadow-sm">
+                    <div class="absolute -right-12 -top-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="current-badge-ticker" class="text-2xl font-black text-white bg-gradient-to-tr from-emerald-600 to-teal-500 px-3 py-1 rounded-lg shadow-sm">FPT</span>
+                                <div>
+                                    <h2 id="current-full-name" class="text-base font-bold text-slate-900">Công ty Cổ phần FPT</h2>
+                                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                                        <span id="current-exchange-floor" class="font-bold text-blue-600">HOSE</span>
+                                        <span>•</span>
+                                        <span id="current-sector" class="text-purple-600">Công nghệ thông tin</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Price summary -->
+                        <div class="text-right sm:text-right w-full sm:w-auto flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
+                            <div>
+                                <div class="text-3xl font-black text-slate-900 font-mono" id="current-primary-price">134,500đ</div>
+                                <div class="text-xs font-bold font-mono text-finance-bull mt-0.5 flex items-center justify-end gap-1" id="current-primary-change">
+                                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +2.34%
+                                </div>
+                            </div>
+                            <!-- Watchlist Star toggle -->
+                            <button onclick="toggleWatchlistPin(currentStock)" class="sm:mt-2 p-1.5 rounded-lg border border-slate-200 hover:border-amber-500 hover:text-amber-500 bg-slate-50 hover:bg-amber-50/50 transition shadow-sm" title="Ghim lên watchlist">
+                                <i data-lucide="star" id="watchlist-star-icon" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ceiling, Floor, Reference line indicators -->
+                    <div class="grid grid-cols-3 gap-2 text-center text-[10px] mt-4 pt-3 border-t border-slate-100">
+                        <div class="bg-purple-50 py-1.5 rounded border border-purple-100">
+                            <span class="text-purple-600 block mb-0.5 font-medium">Trần (Ceil)</span>
+                            <span id="ceil-price" class="font-mono text-purple-600 font-bold">143,900đ</span>
+                        </div>
+                        <div class="bg-amber-50 py-1.5 rounded border border-amber-100">
+                            <span class="text-amber-700 block mb-0.5 font-medium">Tham chiếu (Ref)</span>
+                            <span id="ref-price" class="font-mono text-amber-700 font-bold">134,500đ</span>
+                        </div>
+                        <div class="bg-cyan-50 py-1.5 rounded border border-cyan-100">
+                            <span class="text-cyan-600 block mb-0.5 font-medium">Sàn (Floor)</span>
+                            <span id="floor-price" class="font-mono text-cyan-600 font-bold">125,100đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REALTIME CHART CARD -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="candlestick-chart" class="text-emerald-600 w-4.5 h-4.5"></i>
+                                Biểu Đồ Phân Tích Kỹ Thuật
+                            </h2>
+                            <p class="text-xs text-slate-500">Động lượng lịch sử và tín hiệu giao dịch ngắn/dài hạn</p>
+                        </div>
+                        
+                        <!-- Timeframe Selectors -->
+                        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                            <button onclick="changeTimeframe('24h')" id="tf-24h" class="timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium text-slate-600 hover:text-slate-850 transition">1 Phiên</button>
+                            <button onclick="changeTimeframe('7d')" id="tf-7d" class="timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium text-slate-600 hover:text-slate-850 transition">1 Tuần</button>
+                            <button onclick="changeTimeframe('30d')" id="tf-30d" class="timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium bg-blue-600 text-white shadow-sm transition">1 Tháng</button>
+                            <button onclick="changeTimeframe('1y')" id="tf-1y" class="timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium text-slate-600 hover:text-slate-850 transition">1 Năm</button>
+                        </div>
+                    </div>
+
+                    <!-- Indicators Controllers -->
+                    <div class="flex flex-wrap items-center gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200 text-[11px]">
+                        <span class="text-slate-500 font-semibold mr-1">Chỉ báo kỹ thuật:</span>
+                        <button onclick="toggleIndicator('ma')" id="ind-ma" class="px-2 py-0.5 rounded border border-amber-500/30 text-amber-700 bg-amber-50 hover:bg-amber-100 transition flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> MA (20)
+                        </button>
+                        <button onclick="toggleIndicator('rsi')" id="ind-rsi" class="px-2 py-0.5 rounded border border-indigo-500/30 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> RSI (14)
+                        </button>
+                        <button onclick="toggleIndicator('macd')" id="ind-macd" class="px-2 py-0.5 rounded border border-rose-500/30 text-rose-700 bg-rose-50 hover:bg-rose-100 transition flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> MACD
+                        </button>
+                    </div>
+
+                    <!-- Main Canvas wrapper -->
+                    <div class="relative w-full h-[280px] sm:h-[320px]">
+                        <canvas id="stockChart"></canvas>
+                    </div>
+
+                    <!-- Period Highs / Lows -->
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs py-2 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <span class="text-slate-400 block text-[10px] mb-0.5 uppercase">Thấp nhất</span>
+                            <span id="low-period" class="font-mono text-rose-600 font-bold">124,500đ</span>
+                        </div>
+                        <div class="border-x border-slate-200">
+                            <span class="text-slate-400 block text-[10px] mb-0.5 uppercase">Trung bình</span>
+                            <span id="avg-period" class="font-mono text-slate-700 font-bold">132,100đ</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[10px] mb-0.5 uppercase">Cao nhất</span>
+                            <span id="high-period" class="font-mono text-emerald-600 font-bold">139,800đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KEY FINANCIAL HEALTH CARD -->
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="activity" class="text-blue-600 w-4 h-4"></i>
+                        Thông Số Tài Chính & Định Giá Cơ Bản
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center shadow-sm">
+                            <span class="text-slate-500 block text-[10px] mb-1">Hệ số P/E</span>
+                            <span id="stock-pe" class="font-mono font-bold text-amber-700">18.2</span>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center shadow-sm">
+                            <span class="text-slate-500 block text-[10px] mb-1">Chỉ số EPS</span>
+                            <span id="stock-eps" class="font-mono font-bold text-emerald-600">7,390đ</span>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center shadow-sm">
+                            <span class="text-slate-500 block text-[10px] mb-1">Giá trị P/B</span>
+                            <span id="stock-pb" class="font-mono font-bold text-blue-600">3.45</span>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center shadow-sm">
+                            <span class="text-slate-500 block text-[10px] mb-1">Hiệu suất ROE</span>
+                            <span id="stock-roe" class="font-mono font-bold text-purple-600">24.5%</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-xs border-t border-slate-100 pt-4">
+                        <div class="space-y-2">
+                            <div class="flex justify-between py-1 border-b border-slate-100">
+                                <span class="text-slate-500">Tỷ lệ Nợ/Vốn CSH (D/E)</span>
+                                <span id="fin-de" class="font-mono text-slate-800 font-semibold">0.45</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-100">
+                                <span class="text-slate-500">Tỷ suất cổ tức bình quân</span>
+                                <span id="fin-div" class="font-mono text-emerald-600 font-semibold">2.5% - 4.0%</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between py-1 border-b border-slate-100">
+                                <span class="text-slate-500">Khối lượng CP lưu hành</span>
+                                <span id="fin-shares" class="font-mono text-slate-800 font-semibold">1.46 Tỷ CP</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-100">
+                                <span class="text-slate-500">Biên lợi nhuận gộp</span>
+                                <span id="fin-margin" class="font-mono text-slate-800 font-semibold">39.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SWOT EVALUATION PANEL -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="text-emerald-600 w-4.5 h-4.5"></i>
+                        <h2 class="text-sm font-bold text-slate-800">Phân Tích SWOT Doanh Nghiệp (<span id="swot-stock-name">FPT</span>)</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100 space-y-2">
+                            <h3 class="font-bold text-emerald-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Điểm Mạnh (Strengths)
+                            </h3>
+                            <ul id="swot-strengths" class="list-disc list-inside space-y-1 text-slate-700">
+                                <!-- Dynamic JS SWOT strengths -->
+                            </ul>
+                        </div>
+
+                        <div class="p-3 bg-rose-50 rounded-xl border border-rose-100 space-y-2">
+                            <h3 class="font-bold text-rose-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Điểm Yếu (Weaknesses)
+                            </h3>
+                            <ul id="swot-weaknesses" class="list-disc list-inside space-y-1 text-slate-700">
+                                <!-- Dynamic JS SWOT weaknesses -->
+                            </ul>
+                        </div>
+
+                        <div class="p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+                            <h3 class="font-bold text-blue-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Cơ Hội (Opportunities)
+                            </h3>
+                            <ul id="swot-opportunities" class="list-disc list-inside space-y-1 text-slate-700">
+                                <!-- Dynamic JS SWOT opportunities -->
+                            </ul>
+                        </div>
+
+                        <div class="p-3 bg-amber-50 rounded-xl border border-amber-100 space-y-2">
+                            <h3 class="font-bold text-amber-700 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Thách Thức (Threats)
+                            </h3>
+                            <ul id="swot-threats" class="list-disc list-inside space-y-1 text-slate-700">
+                                <!-- Dynamic JS SWOT threats -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MACRO & MARKET SENTIMENT NEWS SIMULATOR -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 space-y-4 glow-blue relative overflow-hidden shadow-sm">
+                    <div class="absolute -right-8 -top-8 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none"></div>
+                    
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="newspaper" class="text-blue-600 w-4.5 h-4.5"></i>
+                        <h2 class="text-sm font-bold text-slate-800">Bộ Giả Lập Vĩ Mô & Sự Kiện Thị Trường</h2>
+                    </div>
+                    <p class="text-xs text-slate-500">Thử nghiệm kịch bản tác động trực quan đến giá cổ phiếu của doanh nghiệp.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button onclick="simulateMacro('positive')" class="text-left p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-xs transition shadow-sm">
+                            <p class="font-bold text-emerald-700 mb-1">🔥 Hạ lãi suất điều hành</p>
+                            <span class="text-slate-500 font-normal block leading-relaxed text-[11px]">Bơm tiền rẻ thúc đẩy lực mua thị trường.</span>
+                        </button>
+
+                        <button onclick="simulateMacro('neutral')" class="text-left p-3 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-xs transition shadow-sm">
+                            <p class="font-bold text-blue-700 mb-1">📈 Khối ngoại mua ròng</p>
+                            <span class="text-slate-500 font-normal block leading-relaxed text-[11px]">Bệ đỡ chắc chắn cho nhóm Bluechip VN30.</span>
+                        </button>
+
+                        <button onclick="simulateMacro('negative')" class="text-left p-3 rounded-lg border border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-xs transition shadow-sm">
+                            <p class="font-bold text-rose-700 mb-1">⚠️ Tỷ giá tăng (DXY)</p>
+                            <span class="text-slate-500 font-normal block leading-relaxed text-[11px]">Tạo áp lực rút vốn ròng ngắn hạn.</span>
+                        </button>
+                    </div>
+
+                    <!-- Simulator Console output -->
+                    <div id="simulator-console" class="bg-slate-900 text-white p-3 rounded-lg border border-slate-800 text-[11px] font-mono space-y-1 h-32 overflow-y-auto shadow-inner">
+                        <div class="text-slate-400">[VNStock Console] Bàn điều khiển tác động vĩ mô sẵn sàng.</div>
+                        <div class="text-yellow-400">[VNStock Console] Chọn một kịch bản vĩ mô bên trên để thay đổi dòng tiền.</div>
+                    </div>
+                </div>
+
+                <!-- STOCK ACCUMULATION (DCA) PLANNING CALCULATOR -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="text-emerald-600 w-4.5 h-4.5"></i>
+                        <h2 class="text-sm font-bold text-slate-800">Hoạch Định Kế Hoạch Tích Sản Định Kỳ (DCA)</h2>
+                    </div>
+                    <p class="text-xs text-slate-500">Hệ thống tính toán trung bình giá tích lũy thông minh qua các kỳ biến động giá.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-500 mb-1">Số tiền góp định kỳ</label>
+                            <div class="relative">
+                                <input type="number" id="dca-amount" value="5000000" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 pl-3 text-slate-800 focus:outline-none focus:border-emerald-500 font-mono text-sm shadow-sm" placeholder="Nhập tiền...">
+                                <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-semibold">VNĐ</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-500 mb-1">Tần suất tích sản</label>
+                            <select id="dca-frequency" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-slate-700 focus:outline-none focus:border-emerald-500 text-sm shadow-sm">
+                                <option value="7">Mỗi tuần (Thứ 2)</option>
+                                <option value="30" selected>Mỗi tháng (Bắt đầu kỳ lương)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-500 mb-1">Thời gian tích sản</label>
+                            <select id="dca-duration" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-slate-700 focus:outline-none focus:border-emerald-500 text-sm shadow-sm">
+                                <option value="6">6 tháng gần đây</option>
+                                <option value="12" selected>1 năm vừa qua</option>
+                                <option value="36">3 năm tích lũy</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="calculateDCA()" class="w-full py-2.5 bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600 text-white font-extrabold rounded-lg text-sm shadow-md flex items-center justify-center gap-2 transition active:scale-[0.99]">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 text-white"></i> Tính toán Hiệu quả Đầu tư
+                    </button>
+
+                    <!-- DCA Result Cards -->
+                    <div id="dca-results" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="text-center p-2">
+                            <span class="text-slate-400 text-[10px] block uppercase font-medium">Tổng vốn đầu tư</span>
+                            <span id="dca-total-spent" class="font-mono text-sm font-bold text-slate-800 block mt-1">60,000,000 VNĐ</span>
+                        </div>
+                        <div class="text-center p-2 border-y sm:border-y-0 sm:border-x border-slate-200">
+                            <span class="text-slate-400 text-[10px] block uppercase font-medium">Giá trị tài sản hiện tại</span>
+                            <span id="dca-total-value" class="font-mono text-sm font-bold text-finance-bull block mt-1">74,250,000 VNĐ</span>
+                        </div>
+                        <div class="text-center p-2">
+                            <span class="text-slate-400 text-[10px] block uppercase font-medium">Hiệu suất lợi nhuận (ROI)</span>
+                            <span id="dca-roi" class="font-mono text-sm font-bold text-finance-bull block mt-1">+23.75%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- NOTIFICATION BANNER -->
+        <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-10 opacity-0 pointer-events-none transition duration-300 bg-blue-600 text-white p-3.5 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 border border-blue-500">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span id="toast-text">Đã cập nhật hệ thống!</span>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-8 px-4 mt-12 text-center text-xs text-slate-500 shadow-sm">
+        <div class="max-w-7xl mx-auto space-y-2">
+            <p class="text-slate-800 font-bold text-sm tracking-wider">VNSTOCK</p>
+            <p class="text-[11px]">Hệ thống phân tích kỹ thuật tích sản tự động • Phát triển bởi <span class="text-blue-600 font-semibold">devlinphu</span></p>
+            <p class="text-amber-700/80 font-bold max-w-2xl mx-auto leading-relaxed pt-2">
+                ⚠️ Cảnh báo rủi ro: Đầu tư chứng khoán luôn tiềm ẩn rủi ro thị trường. Tất cả số liệu, đồ thị và thuật toán DCA trên trang web mang tính chất tham khảo học tập, nghiên cứu độc lập.
+            </p>
+            <p class="pt-4 border-t border-slate-100 text-[10px] text-slate-400">© 2026 VNStock Platform. Sản phẩm được phát triển bởi devlinphu.</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        
+        // Comprehensive database representing key sectors in VN market
+        const enterpriseDb = {
+            FPT: {
+                name: "Công ty Cổ phần FPT",
+                exchange: "HOSE",
+                price: 134500,
+                sector: "Công nghệ thông tin",
+                mcap: "198.54K",
+                pe: "18.2",
+                eps: "7,390đ",
+                pb: "3.45",
+                roe: "24.5%",
+                volume: 2450100,
+                de: "0.45",
+                div: "2.5% - 4.0% / năm",
+                shares: "1.46 Tỷ CP",
+                margin: "39.2%",
+                strengths: [
+                    "Đầu ngành công nghệ tại VN, tăng trưởng lợi nhuận vững vàng trên 20%/năm.",
+                    "Hợp đồng xuất khẩu phần mềm phát triển mạnh sang Mỹ, Nhật Bản và EU.",
+                    "Sở hữu hệ sinh thái CNTT, viễn thông và giáo dục khép kín."
+                ],
+                weaknesses: [
+                    "Chi phí nhân công CNTT chất lượng cao tăng làm thu hẹp nhẹ biên dịch vụ.",
+                    "Mảng bán dẫn và AI còn ở giai đoạn đầu, cần đầu tư R&D lớn.",
+                    "Room ngoại luôn kín 49%, khó thu hút thêm dòng ngoại vốn trực tiếp diện rộng."
+                ],
+                opportunities: [
+                    "Cách mạng chip bán dẫn toàn cầu mở đường cho FPT tham gia sâu vào chuỗi.",
+                    "Hợp tác phát triển siêu máy tính AI cùng NVIDIA nâng tầm vị thế công nghệ.",
+                    "Xu hướng chuyển đổi số của khối chính phủ và doanh nghiệp tăng mạnh."
+                ],
+                threats: [
+                    "Rủi ro suy thoái kinh tế thế giới làm giảm ngân sách chi tiêu phần mềm thế giới.",
+                    "Tỷ giá ngoại tệ biến động (đặc biệt là Yên Nhật JPY) tác động tới doanh số xuất khẩu.",
+                    "Sự cạnh tranh gắt gao về mặt tuyển dụng nhân tài từ các đối thủ lớn tại Ấn Độ."
+                ]
+            },
+            HPG: {
+                name: "Công ty Cổ phần Tập đoàn Hòa Phát",
+                exchange: "HOSE",
+                price: 28350,
+                sector: "Nguyên vật liệu (Thép)",
+                mcap: "164.72K",
+                pe: "13.4",
+                eps: "2,110đ",
+                pb: "1.65",
+                roe: "12.8%",
+                volume: 8945200,
+                de: "0.68",
+                div: "1.5% - 3.0% / năm",
+                shares: "5.81 Tỷ CP",
+                margin: "14.8%",
+                strengths: [
+                    "Vua thép Việt Nam, chiếm hơn 35% thị phần thép xây dựng toàn quốc.",
+                    "Chuỗi lò cao khép kín hiện đại, tối ưu chi phí quặng thép cực sâu.",
+                    "Lợi thế quy mô lớn giúp đàm phán mua nguyên liệu đầu vào tốt nhất."
+                ],
+                weaknesses: [
+                    "Ngành thép có tính chu kỳ rất lớn (bùng nổ hoặc đóng băng).",
+                    "Đang dồn lực vốn lớn vào Đại dự án Dung Quất 2 làm giảm dòng tiền mặt chia cổ tức ngắn hạn.",
+                    "Phụ thuộc nhiều vào giá quặng sắt và than cốc thế giới."
+                ],
+                opportunities: [
+                    "Đẩy mạnh giải ngân vốn đầu tư công cầu đường thúc đẩy doanh thu ngành thép.",
+                    "Thị trường bất động sản phục hồi mở rộng thị trường thép dân dụng.",
+                    "Đón đầu làn sóng xuất khẩu thép chất lượng cao sang EU nhờ kiểm soát CO2 tốt."
+                ],
+                threats: [
+                    "Áp lực thép giá rẻ từ Trung Quốc tràn vào cạnh tranh khốc liệt.",
+                    "Các chính sách rào cản phòng vệ thương mại phức tạp tại EU/Mỹ.",
+                    "Chi phí lãi vay có nguy cơ biến động ảnh hưởng biên lợi nhuận ròng."
+                ]
+            },
+            VCB: {
+                name: "Ngân hàng TMCP Ngoại thương Việt Nam",
+                exchange: "HOSE",
+                price: 92800,
+                sector: "Ngân hàng & Tài chính",
+                mcap: "518.29K",
+                pe: "14.8",
+                eps: "6,270đ",
+                pb: "2.10",
+                roe: "18.5%",
+                volume: 1120400,
+                de: "0.12",
+                div: "Cổ tức cổ phiếu 15% - 20%",
+                shares: "5.58 Tỷ CP",
+                margin: "42.1%",
+                strengths: [
+                    "Ngân hàng có vốn hóa lớn nhất, nền tảng hoạt động an toàn nhất hệ thống.",
+                    "Chi phí vốn rẻ nhất thị trường nhờ tỷ lệ tiền gửi không kỳ hạn (CASA) thuộc top đầu.",
+                    "Chất lượng tài sản cực kỳ an toàn, tỷ lệ nợ xấu (NPL) được kiểm soát tối ưu."
+                ],
+                weaknesses: [
+                    "Tốc độ tăng trưởng tín dụng chịu sự quản lý sát sao của NHNN.",
+                    "Thủ tục phê duyệt tín dụng chặt chẽ đôi khi làm trễ tiến độ tiếp cận tệp khách hàng nhanh.",
+                    "Phí dịch vụ truyền thống phải đối mặt áp lực giảm để cạnh tranh với ngân hàng số."
+                ],
+                opportunities: [
+                    "FDI chảy mạnh vào Việt Nam thúc đẩy thầu dịch vụ thanh toán thương mại của VCB.",
+                    "Tiến trình chuyển đổi số giúp ngân hàng tối ưu sâu chi phí vận hành (CIR).",
+                    "Được ưu ái nới room tín dụng nhờ hỗ trợ tái cơ cấu định chế yếu kém."
+                ],
+                threats: [
+                    "Biến động bất động sản kéo dài tạo áp lực gián tiếp lên nhóm nợ nhóm 2, nhóm 3.",
+                    "Áp lực giảm biên lãi ròng (NIM) khi ngân hàng tung gói hỗ trợ lãi suất.",
+                    "Cạnh tranh khốc liệt phân khúc bán lẻ từ khối ngân hàng tư nhân năng động."
+                ]
+            },
+            VNM: {
+                name: "Công ty Cổ phần Sữa Việt Nam",
+                exchange: "HOSE",
+                price: 66100,
+                sector: "Bán lẻ & Tiêu dùng",
+                mcap: "138.15K",
+                pe: "15.4",
+                eps: "4,290đ",
+                pb: "4.12",
+                roe: "21.3%",
+                volume: 2150300,
+                de: "0.22",
+                div: "5.0% - 6.5% / năm (Rất cao)",
+                shares: "2.09 Tỷ CP",
+                margin: "40.5%",
+                strengths: [
+                    "Thương hiệu sữa quốc dân dẫn đầu thị phần sữa nước và sữa bột.",
+                    "Tình hình tài chính an toàn, dồi dào tiền mặt, lịch sử cổ tức tiền mặt đều đặn.",
+                    "Hệ thống trang trại đạt chuẩn GlobalGAP tự chủ đáng kể nguyên liệu."
+                ],
+                weaknesses: [
+                    "Thị trường tiêu thụ sữa nội địa đã chạm ngưỡng bão hòa tăng trưởng chậm lại.",
+                    "Sản phẩm xuất khẩu chủ lực chưa tạo tiếng vang lớn tại thị trường quốc tế mới.",
+                    "Phải chi nhiều tiền quảng bá để cạnh tranh bảo vệ thị phần."
+                ],
+                opportunities: [
+                    "Tái định vị thương hiệu Vinamilk trẻ hóa hình ảnh tiếp cận Gen Z.",
+                    "Mảng sữa organic và sữa hạt thuần thực vật bùng nổ theo xu thế xanh.",
+                    "Tìm kiếm M&A các doanh nghiệp sữa vừa và nhỏ trong khu vực ASEAN."
+                ],
+                threats: [
+                    "Sự trỗi dậy của các hãng sữa nội địa năng động khác (TH True Milk, Nutifood).",
+                    "Giá sữa bột nguyên liệu nhập khẩu chịu biến động mạnh từ sàn giao dịch hàng hóa.",
+                    "Thói quen dinh dưỡng của giới trẻ chuyển dịch sang đồ uống thanh nhiệt, nước trái cây."
+                ]
+            },
+            SSI: {
+                name: "Công ty Cổ phần Chứng khoán SSI",
+                exchange: "HOSE",
+                price: 33200,
+                sector: "Ngân hàng & Tài chính",
+                mcap: "49.80K",
+                pe: "16.1",
+                eps: "2,060đ",
+                pb: "1.95",
+                roe: "14.2%",
+                volume: 4120900,
+                de: "0.85",
+                div: "2.0% - 3.5% / năm",
+                shares: "1.50 Tỷ CP",
+                margin: "51.3%",
+                strengths: [
+                    "Thành viên top đầu thị phần môi giới chứng khoán, đặc biệt ở phân khúc khách hàng tổ chức.",
+                    "Hệ thống quản trị rủi ro margin (ký quỹ) vô cùng chặt chẽ và an toàn.",
+                    "Đội ngũ phân tích và nghiên cứu có uy tín hàng đầu thị trường."
+                ],
+                weaknesses: [
+                    "Chi phí hoạt động cao để duy trì vị thế và hoa hồng cho mạng lưới môi giới.",
+                    "Biên lợi nhuận nhạy cảm cực lớn với thanh khoản chung của thị trường."
+                ],
+                opportunities: [
+                    "Đón đầu làn sóng nâng hạng thị trường Việt Nam từ cận biên lên mới nổi.",
+                    "Thúc đẩy tăng trưởng tự doanh nhờ nắm giữ các cổ phiếu cơ bản chất lượng cực tốt."
+                ],
+                threats: [
+                    "Cạnh tranh gay gắt từ các công ty chứng khoán ngoại miễn phí giao dịch (Zero-Fee).",
+                    "Thị trường sụt giảm mạnh ảnh hưởng đồng thời mảng cho vay margin và tự doanh."
+                ]
+            },
+            VHM: {
+                name: "Công ty Cổ phần Vinhomes",
+                exchange: "HOSE",
+                price: 41800,
+                sector: "Bất động sản",
+                mcap: "182.01K",
+                pe: "5.8",
+                eps: "7,210đ",
+                pb: "1.02",
+                roe: "20.1%",
+                volume: 5410900,
+                de: "0.38",
+                div: "3.0% - 4.5% / năm",
+                shares: "4.35 Tỷ CP",
+                margin: "48.5%",
+                strengths: [
+                    "Đại gia bất động sản nhà ở số 1 Việt Nam, sở hữu quỹ đất sạch cực lớn.",
+                    "Năng lực triển khai đại đô thị và bàn giao đúng hẹn hàng đầu.",
+                    "Thương hiệu uy tín dễ bán và dễ tiếp cận các tổ chức tài chính lớn để vay vốn."
+                ],
+                weaknesses: [
+                    "Rủi ro đòn bẩy tài chính gián tiếp hỗ trợ dòng tiền chung trong tập đoàn mẹ Vingroup.",
+                    "Mở bán dự án mới gặp rào cản pháp lý chung từ cơ quan quản lý nhà nước."
+                ],
+                opportunities: [
+                    "Phân khúc bất động sản vùng ven thành phố lớn hưởng lợi mạnh mẽ từ hạ tầng kết nối.",
+                    "Dự án nhà ở xã hội (Happy Home) mở ra phân khúc tiêu thụ sản phẩm khổng lồ."
+                ],
+                threats: [
+                    "Lãi suất cho vay mua nhà ở mức cao làm chùn bước nhà đầu tư cá nhân.",
+                    "Nghẽn pháp lý phê duyệt quy hoạch kéo dài làm chậm kế hoạch hạch toán doanh thu."
+                ]
+            },
+            VIC: {
+                name: "Tập đoàn Vingroup - CTCP",
+                exchange: "HOSE",
+                price: 43200,
+                sector: "Bất động sản",
+                mcap: "164.50K",
+                pe: "38.5",
+                eps: "1,120đ",
+                pb: "1.25",
+                roe: "3.8%",
+                volume: 3890200,
+                de: "1.45",
+                div: "Không chia cổ tức",
+                shares: "3.81 Tỷ CP",
+                margin: "21.2%",
+                strengths: [
+                    "Tập đoàn tư nhân đa ngành lớn nhất Việt Nam, hệ sinh thái toàn diện từ BĐS, du lịch đến công nghiệp.",
+                    "Sở hữu thương hiệu Vinhomes đem lại dòng tiền phát triển cốt lõi bền vững."
+                ],
+                weaknesses: [
+                    "Áp lực tài chính cực lớn từ hoạt động nghiên cứu phát triển mảng xe điện VinFast trên toàn cầu.",
+                    "Hệ số nợ vay trên vốn chủ sở hữu tăng cao trong những năm gần đây."
+                ],
+                opportunities: [
+                    "Nếu xe điện VinFast hòa vốn và khẳng định vị thế tại Mỹ, định giá VIC sẽ bùng nổ.",
+                    "Tiềm năng mở rộng các dịch vụ xanh tích hợp trong nước thu hút vốn ESG quốc tế."
+                ],
+                threats: [
+                    "Cạnh tranh nghẹt thở từ các hãng xe điện Trung Quốc và các hãng ô tô truyền thống toàn cầu.",
+                    "Thị trường tài chính biến động mạnh gây áp lực lên khả năng tái cơ cấu nợ vay quốc tế."
+                ]
+            },
+            MWG: {
+                name: "Công ty Cổ phần Đầu tư Thế giới Di động",
+                exchange: "HOSE",
+                price: 58500,
+                sector: "Bán lẻ & Tiêu dùng",
+                mcap: "85.60K",
+                pe: "19.5",
+                eps: "3,000đ",
+                pb: "3.20",
+                roe: "16.8%",
+                volume: 3204500,
+                de: "0.52",
+                div: "1.0% - 2.5% / năm",
+                shares: "1.46 Tỷ CP",
+                margin: "18.5%",
+                strengths: [
+                    "Chuỗi bán lẻ điện thoại, điện máy có thị phần vượt trội và quản trị vận hành xuất sắc.",
+                    "Bách Hóa Xanh đã đạt điểm hòa vốn và bắt đầu ghi nhận lợi nhuận tích cực."
+                ],
+                weaknesses: [
+                    "Sức mua hàng điện máy, ICT bão hòa, biên lợi nhuận bị vắt kiệt do chiến tranh giá.",
+                    "Chi phí thuê mặt bằng ở các vị trí vàng đắc địa liên tục có xu hướng nhích tăng."
+                ],
+                opportunities: [
+                    "Thành công gọi vốn ngoại cho chuỗi Bách Hóa Xanh giúp giải phóng nguồn tiền mặt lớn.",
+                    "Mở rộng thị trường bán lẻ sang thị trường tiềm năng Indonesia thông qua thương hiệu Era Blue."
+                ],
+                threats: [
+                    "Xu hướng chuyển dịch mạnh mẽ của giới trẻ sang mua sắm trực tuyến (TikTok Shop, Shopee).",
+                    "Rủi ro phục hồi chi tiêu bán lẻ chậm hơn so với dự phóng của các quỹ đầu tư."
+                ]
+            },
+            GAS: {
+                name: "Tổng Công ty Khí Việt Nam - CTCP",
+                exchange: "HOSE",
+                price: 78500,
+                sector: "Công nghệ & Dầu khí",
+                mcap: "179.80K",
+                pe: "15.1",
+                eps: "5,200đ",
+                pb: "2.85",
+                roe: "19.2%",
+                volume: 850100,
+                de: "0.15",
+                div: "4.0% - 6.0% / năm",
+                shares: "2.29 Tỷ CP",
+                margin: "17.4%",
+                strengths: [
+                    "Độc quyền phân phối khí thiên nhiên tại Việt Nam, doanh thu và dòng tiền mặt cực kỳ lớn.",
+                    "Cơ cấu tài chính an toàn hàng đầu sàn chứng khoán, nợ vay ngân hàng rất thấp."
+                ],
+                weaknesses: [
+                    "Giá bán khí neo theo biến động giá dầu thô Brent quốc tế nên lợi nhuận khó chủ động.",
+                    "Các mỏ khí cũ đang dần cạn kiệt, cần đầu tư đường ống mới tốn kém."
+                ],
+                opportunities: [
+                    "Nhu cầu điện khí hóa (LNG) phục vụ Quy hoạch điện VIII đang mở đường cho GAS phát triển.",
+                    "Xây dựng xong cảng kho cảng LNG Thị Vải giúp mở khóa nhập khẩu khí dồi dào."
+                ],
+                threats: [
+                    "Giá dầu thế giới sụt giảm đột ngột ảnh hưởng trực tiếp đến kết quả kinh doanh.",
+                    "Tiến độ giải phóng mặt bằng các dự án khí lớn thường bị chậm trễ kéo dài."
+                ]
+            }
+        };
+
+        // UI Application States
+        let currentStock = 'FPT';
+        let currentPrice = 134500;
+        let activeTimeframe = '30d';
+        let indicators = { ma: true, rsi: false, macd: false };
+        let activeSector = 'ALL';
+        let chartInstance = null;
+        let stockHistoricalData = [];
+        
+        // Pin watchlist default
+        let watchlistPins = ['FPT', 'HPG', 'VCB', 'VNM', 'SSI', 'VHM'];
+
+        // Dynamic Stock Data Generator
+        function getStockData(ticker) {
+            ticker = ticker.toUpperCase().trim();
+            if (enterpriseDb[ticker]) {
+                return enterpriseDb[ticker];
+            }
+            
+            // Build dynamic profiles if ticker is customized
+            let hash = 0;
+            for (let i = 0; i < ticker.length; i++) {
+                hash = ticker.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const absHash = Math.abs(hash);
+            
+            const basePrice = 12000 + (absHash % 136) * 1000;
+            const floors = ["HOSE", "HNX", "HOSE"];
+            const floor = floors[absHash % 3];
+            const sectors = ["Ngân hàng & Tài chính", "Bất động sản", "Nguyên vật liệu (Thép)", "Bán lẻ & Tiêu dùng", "Công nghệ & Dầu khí"];
+            const sector = sectors[absHash % sectors.length];
+            
+            const pe = (6 + (absHash % 18) + (absHash % 10)/10).toFixed(1);
+            const eps = Math.round(basePrice / parseFloat(pe)).toLocaleString('vi-VN') + "đ";
+            const pb = (0.8 + (absHash % 4) + (absHash % 10)/10).toFixed(2);
+            const roe = (8 + (absHash % 22) + (absHash % 10)/10).toFixed(1) + "%";
+            const volume = 200000 + (absHash % 800) * 10000;
+            const de = (0.2 + (absHash % 15) / 10).toFixed(2);
+            const div = (1.5 + (absHash % 6)).toFixed(1) + "% - " + (3.5 + (absHash % 8)).toFixed(1) + "% / năm";
+            const shares = ((absHash % 4) + 0.3).toFixed(2) + " Tỷ CP";
+            const margin = (12 + (absHash % 38)).toFixed(1) + "%";
+            const mcap = Math.round((parseFloat(shares) * basePrice) / 1000000).toLocaleString('vi-VN') + " Tỷ";
+
+            let sectorId = "OTHER";
+            if (sector.includes("Ngân hàng")) sectorId = "BANK";
+            else if (sector.includes("Bất động sản")) sectorId = "REAL_ESTATE";
+            else if (sector.includes("Thép")) sectorId = "STEEL";
+            else if (sector.includes("Bán lẻ")) sectorId = "CONSUMER";
+            else if (sector.includes("Công nghệ") || sector.includes("Dầu khí")) sectorId = "TECH";
+
+            return {
+                name: `Công ty Cổ phần Đầu tư ${ticker} (Phân tích giả lập)`,
+                exchange: floor,
+                price: basePrice,
+                sector: sector,
+                sectorId: sectorId,
+                mcap: mcap,
+                pe: pe,
+                eps: eps,
+                pb: pb,
+                roe: roe,
+                volume: volume,
+                de: de,
+                div: div,
+                shares: shares,
+                margin: margin,
+                strengths: [
+                    `Sở hữu thị phần ổn định trong phân khúc cốt lõi của thương hiệu ${ticker}.`,
+                    "Ban lãnh đạo chủ chốt gắn bó lâu năm, quản trị tài chính linh hoạt.",
+                    "Sản phẩm dịch vụ của doanh nghiệp giữ vững sức mua tốt so với các đối thủ nhỏ."
+                ],
+                weaknesses: [
+                    "Chi phí nguyên vật liệu và chuỗi cung ứng nhạy cảm cao với lạm phát.",
+                    "Áp lực tối ưu lợi nhuận khi tệp khách hàng yêu cầu cạnh tranh giá cao hơn."
+                ],
+                opportunities: [
+                    "Đầu tư công nghệ số hóa nâng cao năng lực sản xuất và phân phối diện rộng.",
+                    "Các hiệp định thương mại mới tạo điều kiện đẩy mạnh xuất khẩu gián tiếp."
+                ],
+                threats: [
+                    "Sự xuất hiện nhanh chóng của các công ty khởi nghiệp ứng dụng mô hình đột phá.",
+                    "Sự thay đổi đột ngột về mặt chính sách tài khóa thắt chặt lãi suất trong nước."
+                ]
+            };
+        }
+
+        // Apply sector categories to main static database items
+        enterpriseDb.FPT.sectorId = "TECH";
+        enterpriseDb.HPG.sectorId = "STEEL";
+        enterpriseDb.VCB.sectorId = "BANK";
+        enterpriseDb.VNM.sectorId = "CONSUMER";
+        enterpriseDb.SSI.sectorId = "BANK";
+        enterpriseDb.VHM.sectorId = "REAL_ESTATE";
+        enterpriseDb.VIC.sectorId = "REAL_ESTATE";
+        enterpriseDb.MWG.sectorId = "CONSUMER";
+        enterpriseDb.GAS.sectorId = "TECH";
+
+        // Generates historical prices
+        function generateStockHistoricalData(days, ticker) {
+            let points = [];
+            const info = getStockData(ticker);
+            let current = info.price * 0.95;
+            const now = new Date();
+            
+            let volatility = 0.015;
+            if (ticker === 'HPG' || ticker === 'SSI') volatility = 0.024;
+            if (ticker === 'VCB' || ticker === 'VNM') volatility = 0.011;
+
+            let trend = 0.0006;
+            if (ticker === 'FPT') trend = 0.0018;
+            if (ticker === 'VNM') trend = -0.0001;
+
+            for (let i = days; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                const change = (Math.random() - (0.5 - trend)) * (current * volatility);
+                current += change;
+
+                points.push({
+                    date: date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }),
+                    price: Math.round(current)
+                });
+            }
+            return points;
+        }
+
+        // Renders technical chart
+        function renderChart() {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            
+            let dayCount = 30;
+            if (activeTimeframe === '24h') dayCount = 24;
+            else if (activeTimeframe === '7d') dayCount = 7;
+            else if (activeTimeframe === '30d') dayCount = 30;
+            else if (activeTimeframe === '1y') dayCount = 250;
+
+            stockHistoricalData = generateStockHistoricalData(dayCount, currentStock);
+            
+            const labels = stockHistoricalData.map(d => d.date);
+            const prices = stockHistoricalData.map(d => d.price);
+            
+            // Tech indicator: Moving Average (MA)
+            let maData = [];
+            if (indicators.ma) {
+                const period = 5;
+                for (let i = 0; i < prices.length; i++) {
+                    if (i < period - 1) {
+                        maData.push(null);
+                    } else {
+                        const sum = prices.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                        maData.push(Math.round(sum / period));
+                    }
+                }
+            }
+
+            // Tech indicator: RSI
+            let rsiData = [];
+            if (indicators.rsi) {
+                rsiData = prices.map((p, idx) => {
+                    const base = 48 + (idx % 6 === 0 ? 15 : idx % 4 === 0 ? -12 : 1);
+                    return Math.max(10, Math.min(90, base));
+                });
+            }
+
+            // Tech indicator: MACD
+            let macdData = [];
+            if (indicators.macd) {
+                macdData = prices.map((p, idx) => {
+                    return Math.sin(idx / 3) * (p * 0.012);
+                });
+            }
+
+            const datasets = [{
+                label: `Thị giá ${currentStock} (đ)`,
+                data: prices,
+                borderColor: '#059669', // Strong emerald in Light Mode
+                backgroundColor: 'rgba(5, 150, 105, 0.03)',
+                fill: true,
+                tension: 0.12,
+                borderWidth: 2,
+                yAxisID: 'y'
+            }];
+
+            if (indicators.ma) {
+                datasets.push({
+                    label: 'MA (20)',
+                    data: maData,
+                    borderColor: '#b45309', // Darker amber
+                    borderDash: [5, 5],
+                    borderWidth: 1.5,
+                    fill: false,
+                    tension: 0.1,
+                    yAxisID: 'y'
+                });
+            }
+
+            if (indicators.rsi) {
+                datasets.push({
+                    label: 'RSI (14)',
+                    data: rsiData,
+                    borderColor: '#4f46e5', // Royal Blue
+                    borderWidth: 1.5,
+                    fill: false,
+                    tension: 0.2,
+                    yAxisID: 'yRsi'
+                });
+            }
+
+            if (indicators.macd) {
+                datasets.push({
+                    label: 'Động lượng MACD',
+                    data: macdData,
+                    borderColor: '#e11d48', // Bright Rose
+                    borderWidth: 1.5,
+                    fill: false,
+                    tension: 0.1,
+                    yAxisID: 'yMacd'
+                });
+            }
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#475569', font: { size: 9, family: 'Plus Jakarta Sans' } }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#0f172a', // Clean slate-900 background tooltip
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: '#334155',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.12)' }, // Very subtle light grid lines
+                            ticks: { color: '#64748b', font: { size: 9 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: 'rgba(148, 163, 184, 0.12)' },
+                            ticks: { 
+                                color: '#64748b', 
+                                font: { size: 9 },
+                                callback: function(value) { return value.toLocaleString('vi-VN') + 'đ'; }
+                            }
+                        },
+                        yRsi: {
+                            type: 'linear',
+                            display: indicators.rsi,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#4f46e5', font: { size: 8 } }
+                        },
+                        yMacd: {
+                            type: 'linear',
+                            display: indicators.macd,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#e11d48', font: { size: 8 } }
+                        }
+                    }
+                }
+            });
+
+            // Update min, max, avg display values
+            const sortedPrices = [...prices].sort((a,b) => a-b);
+            document.getElementById('low-period').textContent = sortedPrices[0].toLocaleString('vi-VN') + 'đ';
+            document.getElementById('high-period').textContent = sortedPrices[sortedPrices.length - 1].toLocaleString('vi-VN') + 'đ';
+            const sum = prices.reduce((a,b) => a+b, 0);
+            document.getElementById('avg-period').textContent = Math.round(sum / prices.length).toLocaleString('vi-VN') + 'đ';
+        }
+
+        // Switch analyzed stock
+        function selectStock(ticker) {
+            currentStock = ticker.toUpperCase().trim();
+            const data = getStockData(ticker);
+            currentPrice = data.price;
+
+            // Update HTML UI Info
+            document.getElementById('current-badge-ticker').textContent = currentStock;
+            document.getElementById('current-full-name').textContent = data.name;
+            document.getElementById('current-exchange-floor').textContent = data.exchange;
+            document.getElementById('current-sector').textContent = data.sector;
+            document.getElementById('current-primary-price').textContent = currentPrice.toLocaleString('vi-VN') + 'đ';
+            
+            // Simulated change calculations
+            const fakePercent = (currentStock.charCodeAt(0) % 2 === 0 ? '+' : '-') + (currentStock.charCodeAt(1) % 5).toFixed(2) + '%';
+            const isUp = fakePercent.startsWith('+');
+            document.getElementById('current-primary-change').className = isUp ? "text-xs font-bold font-mono text-finance-bull mt-0.5 flex items-center justify-end gap-1" : "text-xs font-bold font-mono text-finance-bear mt-0.5 flex items-center justify-end gap-1";
+            document.getElementById('current-primary-change').innerHTML = `<i data-lucide="${isUp ? 'trending-up' : 'trending-down'}" class="w-3.5 h-3.5"></i> ${fakePercent}`;
+
+            // Reference prices limits
+            const floorPercent = data.exchange === "HNX" ? 0.10 : 0.07;
+            const ceil = Math.round(currentPrice * (1 + floorPercent));
+            const floor = Math.round(currentPrice * (1 - floorPercent));
+            document.getElementById('ceil-price').textContent = ceil.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('ref-price').textContent = currentPrice.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('floor-price').textContent = floor.toLocaleString('vi-VN') + 'đ';
+
+            // Fundamental metrics panel
+            document.getElementById('stock-pe').textContent = data.pe;
+            document.getElementById('stock-eps').textContent = data.eps;
+            document.getElementById('stock-pb').textContent = data.pb;
+            document.getElementById('stock-roe').textContent = data.roe;
+
+            document.getElementById('fin-de').textContent = data.de;
+            document.getElementById('fin-div').textContent = data.div;
+            document.getElementById('fin-shares').textContent = data.shares;
+            document.getElementById('fin-margin').textContent = data.margin;
+
+            // SWOT list bindings
+            document.getElementById('swot-stock-name').textContent = currentStock;
+            
+            const fillList = (id, items) => {
+                const el = document.getElementById(id);
+                el.innerHTML = '';
+                items.forEach(itm => {
+                    const li = document.createElement('li');
+                    li.textContent = itm;
+                    el.appendChild(li);
+                });
+            };
+
+            fillList('swot-strengths', data.strengths);
+            fillList('swot-weaknesses', data.weaknesses);
+            fillList('swot-opportunities', data.opportunities);
+            fillList('swot-threats', data.threats);
+
+            // Re-render chart, recalculate DCA and update star icons
+            renderChart();
+            calculateDCA();
+            updateWatchlistStarIcon();
+            
+            // Reinitialize lucide icons inside generated blocks
+            lucide.createIcons();
+
+            // Highlight in the left market table
+            document.querySelectorAll('.market-row').forEach(row => {
+                row.classList.remove('bg-blue-50', 'border-blue-200');
+            });
+            const targetRow = document.getElementById(`row-${currentStock}`);
+            if (targetRow) {
+                targetRow.classList.add('bg-blue-50', 'border-blue-200');
+            }
+        }
+
+        // Sector Tab filter management
+        function changeSectorFilter(sect) {
+            activeSector = sect;
+            document.querySelectorAll('.sect-btn').forEach(btn => {
+                btn.className = "sect-btn px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-850 transition";
+            });
+            document.getElementById(`sect-${sect}`).className = "sect-btn px-2.5 py-1 rounded-md bg-blue-600 text-white font-semibold transition shadow-sm";
+
+            filterAndRenderMarketTable();
+        }
+
+        // Filter market tickers list and render table (NOW ALIVE BY DEFAULT)
+        function filterAndRenderMarketTable() {
+            const searchVal = document.getElementById('market-search').value.toUpperCase().trim();
+            const tbody = document.getElementById('market-table-body');
+            tbody.innerHTML = '';
+
+            // Consolidate static keys + watchlists + searched key to make sure database is dynamic
+            const uniqueTickers = new Set([
+                ...Object.keys(enterpriseDb),
+                ...watchlistPins
+            ]);
+            
+            if (searchVal.length >= 2) {
+                uniqueTickers.add(searchVal);
+            }
+
+            let count = 0;
+            uniqueTickers.forEach(ticker => {
+                const data = getStockData(ticker);
+                
+                // Matches sector filter
+                if (activeSector !== 'ALL') {
+                    if (data.sectorId !== activeSector) return;
+                }
+
+                // Matches search box
+                if (searchVal && !ticker.includes(searchVal) && !data.name.toUpperCase().includes(searchVal)) {
+                    return;
+                }
+
+                count++;
+                
+                const isSelected = ticker === currentStock;
+                const changeVal = (ticker.charCodeAt(0) % 2 === 0 ? 1 : -1) * (ticker.charCodeAt(1) % 6);
+                const isUp = changeVal >= 0;
+
+                const tr = document.createElement('tr');
+                tr.id = `row-${ticker}`;
+                tr.className = `market-row border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer ${isSelected ? 'bg-blue-50/75' : ''}`;
+                tr.setAttribute('onclick', `selectStock('${ticker}')`);
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-mono font-bold">
+                        <span class="text-slate-900 block">${ticker}</span>
+                        <span class="text-[9px] text-slate-400 block max-w-[120px] truncate">${data.name}</span>
+                    </td>
+                    <td class="py-3 px-2 font-mono text-slate-700 font-semibold">${data.price.toLocaleString('vi-VN')}</td>
+                    <td class="py-3 px-2 font-mono text-right font-bold ${isUp ? 'text-finance-bull' : 'text-finance-bear'}">
+                        ${isUp ? '+' : ''}${changeVal.toFixed(2)}%
+                    </td>
+                    <td class="py-3 px-3 font-mono text-right text-slate-400">${data.volume.toLocaleString('vi-VN')}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('visible-ticker-count').textContent = count;
+        }
+
+        // Add or look up stock entered manually
+        function handleManualAddStock() {
+            const input = document.getElementById('market-search');
+            const ticker = input.value.toUpperCase().trim();
+            if (ticker.length < 3) {
+                showToast("Vui lòng nhập mã chứng khoán hợp lệ (từ 3 ký tự trở lên)!");
+                return;
+            }
+            
+            selectStock(ticker);
+            filterAndRenderMarketTable();
+            showToast(`Đã nạp thành công mã ${ticker} vào hệ thống VNStock!`);
+        }
+
+        // Pin Watchlist Management
+        function toggleWatchlistPin(ticker) {
+            ticker = ticker.toUpperCase().trim();
+            const index = watchlistPins.indexOf(ticker);
+            if (index > -1) {
+                if (['FPT','HPG','VCB','VNM'].includes(ticker)) {
+                    showToast("Cổ phiếu trụ VN30 cốt lõi không nên gỡ khỏi watchlist.");
+                    return;
+                }
+                watchlistPins.splice(index, 1);
+                showToast(`Đã gỡ ${ticker} khỏi danh sách theo dõi nhanh.`);
+            } else {
+                watchlistPins.push(ticker);
+                showToast(`Đã thêm ${ticker} vào danh sách theo dõi nhanh.`);
+            }
+            renderWatchlistChips();
+            updateWatchlistStarIcon();
+        }
+
+        function updateWatchlistStarIcon() {
+            const isPinned = watchlistPins.includes(currentStock);
+            const icon = document.getElementById('watchlist-star-icon');
+            if (isPinned) {
+                icon.className = "w-4 h-4 text-amber-500 fill-amber-500";
+            } else {
+                icon.className = "w-4 h-4 text-slate-400";
+            }
+        }
+
+        function renderWatchlistChips() {
+            const container = document.getElementById('watchlist-chips');
+            container.innerHTML = '';
+            
+            watchlistPins.forEach(ticker => {
+                const data = getStockData(ticker);
+                const button = document.createElement('button');
+                const isCurrent = ticker === currentStock;
+                
+                button.className = `flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition font-mono ${isCurrent ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-blue-400'}`;
+                button.setAttribute('onclick', `selectStock('${ticker}')`);
+                button.innerHTML = `
+                    <span>${ticker}</span>
+                    <span class="text-[9px] font-normal ${isCurrent ? 'text-blue-100' : 'text-slate-400'}">${data.price.toLocaleString('vi-VN')}</span>
+                `;
+                container.appendChild(button);
+            });
+        }
+
+        // Change technical timeframe
+        function changeTimeframe(tf) {
+            activeTimeframe = tf;
+            document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.className = "timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium text-slate-600 hover:text-slate-850 transition";
+            });
+            const activeBtn = document.getElementById(`tf-${tf}`);
+            activeBtn.className = "timeframe-btn px-2.5 py-1 rounded text-[11px] font-medium bg-blue-600 text-white shadow-sm transition";
+
+            renderChart();
+            showToast(`Cập nhật biểu đồ theo khung: ${tf === '24h' ? '1 Phiên' : tf === '7d' ? '1 Tuần' : tf === '30d' ? '1 Tháng' : '1 Năm'}`);
+        }
+
+        // Toggle Indicators MA, RSI, MACD
+        function toggleIndicator(ind) {
+            indicators[ind] = !indicators[ind];
+            const btn = document.getElementById(`ind-${ind}`);
+            if (indicators[ind]) {
+                btn.classList.remove('border-slate-200', 'text-slate-400', 'bg-transparent');
+                if (ind === 'ma') btn.className = "px-2 py-0.5 rounded border border-amber-500/30 text-amber-700 bg-amber-50 hover:bg-amber-100 transition flex items-center gap-1";
+                if (ind === 'rsi') btn.className = "px-2 py-0.5 rounded border border-indigo-500/30 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition flex items-center gap-1";
+                if (ind === 'macd') btn.className = "px-2 py-0.5 rounded border border-rose-500/30 text-rose-700 bg-rose-50 hover:bg-rose-100 transition flex items-center gap-1";
+            } else {
+                btn.className = "px-2 py-0.5 rounded border border-slate-200 text-slate-400 bg-transparent hover:bg-slate-50 hover:text-slate-800 transition flex items-center gap-1";
+            }
+            renderChart();
+        }
+
+        // Calculate Dollar Cost Averaging
+        function calculateDCA() {
+            const amount = parseFloat(document.getElementById('dca-amount').value);
+            const freq = parseInt(document.getElementById('dca-frequency').value);
+            const dur = parseInt(document.getElementById('dca-duration').value);
+
+            if (!amount || amount <= 0) {
+                showToast("Vui lòng nhập số vốn đầu tư hợp lệ!");
+                return;
+            }
+
+            let baseROI = 0.12;
+            if (currentStock === 'FPT') baseROI = dur === 36 ? 0.74 : dur === 12 ? 0.23 : 0.09;
+            else if (currentStock === 'HPG') baseROI = dur === 36 ? 0.21 : dur === 12 ? 0.07 : 0.02;
+            else if (currentStock === 'VCB') baseROI = dur === 36 ? 0.42 : dur === 12 ? 0.14 : 0.06;
+            else if (currentStock === 'VNM') baseROI = dur === 36 ? 0.15 : dur === 12 ? 0.04 : 0.01;
+            else {
+                baseROI = (currentPrice % 40 === 0) ? 0.25 : 0.11;
+                if (dur === 36) baseROI *= 2.8;
+                if (dur === 6) baseROI *= 0.45;
+            }
+
+            baseROI += (Math.random() - 0.5) * 0.04;
+
+            const totalPeriods = Math.floor((dur * 30) / freq);
+            const totalSpent = amount * totalPeriods;
+            const totalValue = totalSpent * (1 + baseROI);
+
+            document.getElementById('dca-total-spent').textContent = Math.round(totalSpent).toLocaleString('vi-VN') + " VNĐ";
+            document.getElementById('dca-total-value').textContent = Math.round(totalValue).toLocaleString('vi-VN') + " VNĐ";
+            
+            const roiBadge = document.getElementById('dca-roi');
+            roiBadge.textContent = (baseROI >= 0 ? '+' : '') + (baseROI * 100).toFixed(2) + "%";
+            
+            if (baseROI >= 0) {
+                roiBadge.className = "font-mono text-sm font-bold text-finance-bull block mt-1";
+            } else {
+                roiBadge.className = "font-mono text-sm font-bold text-finance-bear block mt-1";
+            }
+
+            document.getElementById('dca-results').classList.remove('hidden');
+        }
+
+        // Live Simulated Event Actions
+        function simulateMacro(sentiment) {
+            const consoleBox = document.getElementById('simulator-console');
+            const timeStr = new Date().toLocaleTimeString('vi-VN');
+            
+            let message = "";
+            let impactFactor = 1.0;
+            let logMsg = "";
+
+            if (sentiment === 'positive') {
+                message = "🚀 [VĨ MÔ]: Ngân Hàng Nhà Nước họp khẩn, hạ thêm 0.5% lãi suất điều hành.";
+                impactFactor = 1.048; 
+                logMsg = `<span class="text-emerald-400">[Hệ Thống] Tâm lý VN-Index hưng phấn. ${currentStock} tăng bốc đầu ~4.8%!</span>`;
+            } else if (sentiment === 'neutral') {
+                message = "ℹ️ [DÒNG VỐN]: Khối ngoại gom ròng khớp lệnh thỏa thuận nhóm VN30.";
+                impactFactor = 1.021; 
+                logMsg = `<span class="text-blue-400">[Hệ Thống] Khối ngoại nâng đỡ dòng tiền. ${currentStock} tăng nhẹ ~2.1%</span>`;
+            } else {
+                message = "📉 [THẾ GIỚI]: Áp lực tỷ giá tăng vọt làm kéo giãn biên độ lãi suất USD-VND.";
+                impactFactor = 0.958; 
+                logMsg = `<span class="text-rose-400">[Hệ Thống] Xu hướng chốt lời phòng thủ. ${currentStock} chiết khấu giảm ~4.2%</span>`;
+            }
+
+            consoleBox.innerHTML += `<div class="text-slate-100 font-semibold mt-1">${timeStr} - ${message}</div>`;
+            consoleBox.innerHTML += `<div>${logMsg}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+
+            currentPrice = Math.round(currentPrice * impactFactor);
+            
+            const data = getStockData(currentStock);
+            data.price = currentPrice;
+            if (enterpriseDb[currentStock]) {
+                enterpriseDb[currentStock].price = currentPrice;
+            }
+
+            document.getElementById('current-primary-price').textContent = currentPrice.toLocaleString('vi-VN') + 'đ';
+            
+            const floorPercent = data.exchange === "HNX" ? 0.10 : 0.07;
+            const ceil = Math.round(currentPrice * (1 + floorPercent));
+            const floor = Math.round(currentPrice * (1 - floorPercent));
+            document.getElementById('ceil-price').textContent = ceil.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('ref-price').textContent = currentPrice.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('floor-price').textContent = floor.toLocaleString('vi-VN') + 'đ';
+
+            const priceEl = document.getElementById('current-primary-price');
+            priceEl.className = sentiment === 'positive' ? "text-3xl font-black text-finance-bull font-mono transition duration-150 scale-105" : sentiment === 'negative' ? "text-3xl font-black text-finance-bear font-mono transition duration-150 scale-105" : "text-3xl font-black text-blue-600 font-mono transition duration-150 scale-105";
+            
+            setTimeout(() => {
+                priceEl.className = "text-3xl font-black text-slate-900 font-mono transition duration-150";
+            }, 800);
+
+            calculateDCA();
+            filterAndRenderMarketTable();
+            renderChart();
+            showToast("Đã kích hoạt giả lập biến động tin tức!");
+        }
+
+        // Live Continuous Order-Matching Fluctuations simulator for indices
+        function simulateIndexFluctuations() {
+            let vnindex = 1254.82;
+            let vn30 = 1272.10;
+            let hnx = 234.15;
+
+            setInterval(() => {
+                const stepVn = (Math.random() - 0.48) * 0.42;
+                const stepVn30 = (Math.random() - 0.47) * 0.48;
+                const stepHnx = (Math.random() - 0.5) * 0.12;
+
+                vnindex += stepVn;
+                vn30 += stepVn30;
+                hnx += stepHnx;
+
+                const changeVnPercent = ((vnindex - 1242.37) / 1242.37 * 100).toFixed(2);
+                const changeVn30Percent = ((vn30 - 1258.0) / 1258.0 * 100).toFixed(2);
+                const changeHnxPercent = ((hnx - 235.0) / 235.0 * 100).toFixed(2);
+
+                document.getElementById('index-vnindex').textContent = vnindex.toFixed(2);
+                document.getElementById('change-vnindex').innerHTML = `${stepVn >= 0 ? '+' : ''}${(vnindex - 1242.37).toFixed(2)} (${stepVn >= 0 ? '+' : ''}${changeVnPercent}%)`;
+                document.getElementById('index-vnindex').className = stepVn >= 0 ? "font-mono font-bold text-finance-bull" : "font-mono font-bold text-finance-bear";
+                document.getElementById('change-vnindex').className = stepVn >= 0 ? "font-mono text-[10px] text-finance-bull" : "font-mono text-[10px] text-finance-bear";
+
+                document.getElementById('index-vn30').textContent = vn30.toFixed(2);
+                document.getElementById('change-vn30').innerHTML = `${stepVn30 >= 0 ? '+' : ''}${(vn30 - 1258.0).toFixed(2)} (${stepVn30 >= 0 ? '+' : ''}${changeVn30Percent}%)`;
+                document.getElementById('index-vn30').className = stepVn30 >= 0 ? "font-mono font-bold text-finance-bull" : "font-mono font-bold text-finance-bear";
+                document.getElementById('change-vn30').className = stepVn30 >= 0 ? "font-mono text-[10px] text-finance-bull" : "font-mono text-[10px] text-finance-bear";
+
+                document.getElementById('index-hnx').textContent = hnx.toFixed(2);
+                document.getElementById('change-hnx').innerHTML = `${stepHnx >= 0 ? '+' : ''}${(hnx - 235.0).toFixed(2)} (${stepHnx >= 0 ? '+' : ''}${changeHnxPercent}%)`;
+                document.getElementById('index-hnx').className = stepHnx >= 0 ? "font-mono font-bold text-finance-bull" : "font-mono font-bold text-finance-bear";
+                document.getElementById('change-hnx').className = stepHnx >= 0 ? "font-mono text-[10px] text-finance-bull" : "font-mono text-[10px] text-finance-bear";
+            }, 3000);
+        }
+
+        // Helper: Toast displays
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').textContent = text;
+            toast.className = "fixed bottom-4 right-4 z-50 transform translate-y-0 opacity-100 pointer-events-auto transition duration-300 bg-blue-600 text-white p-3.5 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 border border-blue-500";
+            setTimeout(() => {
+                toast.className = "fixed bottom-4 right-4 z-50 transform translate-y-10 opacity-0 pointer-events-none transition duration-300 bg-blue-600 text-white p-3.5 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 border border-blue-500";
+            }, 2500);
+        }
+
+        // System entry point
+        window.onload = function () {
+            lucide.createIcons();
+
+            // Clock
+            setInterval(() => {
+                const clockStr = new Date().toLocaleTimeString('vi-VN');
+                document.getElementById('live-clock').textContent = clockStr;
+                document.getElementById('mobile-live-clock').textContent = clockStr;
+            }, 1000);
+
+            simulateIndexFluctuations();
+
+            // Populate watchlists and select default stock
+            renderWatchlistChips();
+            filterAndRenderMarketTable(); // Render table with all elements
+            selectStock('FPT');
+        }
+    </script>
+</body>
+</html>
